@@ -64,9 +64,12 @@ pander(cbind(news$shares[1:25],news$shares01[1:25]), caption = "First 25 Observa
 train.news <- sample(c(TRUE,FALSE),nrow(news), replace = TRUE, prob = c(0.75,0.25))
 train <- as.data.frame(news[train.news, ])
 test <- as.data.frame(news[!train.news, ])
+drops <- c("url","shares")
+train <- train[ , !(names(train) %in% drops)]
+test <- test[ , !(names(test) %in% drops)]
 
 # build glm model
-model <- glm(shares01 ~ . - shares, data=train, family=binomial)
+model <- glm(shares01 ~ ., data=train, family=binomial)
 pander(summary(model))
 
 # predict with train data
