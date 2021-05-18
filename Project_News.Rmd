@@ -1,0 +1,85 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+---
+title: "Project - Online News Popularity"
+footer: `r paste('Project')`
+author: "2d Lt Elizabeth Frakes"
+date: "Due `r format(as.Date(c('2021/05/21')), '%d %B %Y')`"
+output:
+  pdf_document:
+    df_print: kable
+  html_document:
+    df_print: paged
+  slidy_presentation:
+    code_folding: hide
+    fig_caption: yes
+    smart: no
+keep_tex: yes
+graphics: yes
+---
+
+
+
+```{r intro, echo=FALSE,message=FALSE, warning=FALSE}
+source('C:/Users/Elizabeth/Documents/scripts/R/setup.R')
+shiny::includeCSS('C:/Users/Elizabeth/Documents/scripts/css/flat-slidy.css')
+shiny::includeScript("C:/Users/Elizabeth/Documents/scripts/js/jquery.min.js")
+shiny::includeScript(system.file('C:/Users/Elizabeth/Documents/scripts','js','tpt-scroll.js'))
+shiny::includeScript(system.file('C:/Users/Elizabeth/Documents/scripts','js','hideout.js'))
+library(xlsx)
+library(xtable)
+library(pander)
+library(knitr)
+library(formatR)
+library(glmnet)
+library(pls)
+library(caret)
+library(MASS)
+library(pROC)
+library(ResourceSelection)
+library(matlab)
+library(alr3)
+library(tools)
+Sys.setenv(R_GSCMD="C:/Program Files/gs/gs9.54.0/bin/gswin64.exe")
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+options(xtable.comment = FALSE, xtable.type="latex")
+```
+
+```{r echo = TRUE}
+news <- read.csv("OnlineNewsPopularity.csv")
+news <- na.omit(news) # Removes rows where any column has NA
+mdn.shares <- median(news$shares)
+mdn.shares
+shares01 <- news$shares
+news <- cbind(news, shares01)
+news$shares01 <- ifelse(news$shares01>mdn.shares, 1, 0)
+pander(cbind(news$shares[1:25],news$shares01[1:25]), caption = "First 25 Observations of shares and binary shares")
+```
+# Logistic Regression
+```{r echo = TRUE}
+# create test and training data sets
+train.news <- sample(c(TRUE,FALSE),nrow(news), replace = TRUE, prob = c(0.75,0.25))
+train <- as.data.frame(news[train.news, ])
+test <- as.data.frame(news[!train.news, ])
+
+# build glm model
+model <- glm(shares01 ~ . - shares, data=train, family=binomial)
+pander(summary(model))
+
+# predict with train data
+pr.train <- predict.glm(model, data = train, type = "response")
+train$pred = ifelse(pr.train > 0.5, "1", "0")
+train$pred = as.factor(train$pred)
+
+# predict with test data
+pr.test <- predict.glm(model, newdata = test, type = "response")
+test$pred = ifelse(pr.test > 0.5, "1", "0")
+test$pred = as.factor(test$pred)
+
+# show confusion matrices
+confusionMatrix(train$pred, as.factor(train$shares01))
+confusionMatrix(test$pred, as.factor(test$shares01))
+```
